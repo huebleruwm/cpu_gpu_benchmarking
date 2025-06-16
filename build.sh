@@ -11,7 +11,8 @@ CONFIG=$1
 case "$CONFIG" in
     intel)
         export FC=ifx
-        FFLAGS="-O2"
+        #LDFLAGS="-lgptlf -lgptl"
+        FFLAGS="-O2 -xHost"
         ;;
     nvhpc_cpu)
         export FC=nvfortran

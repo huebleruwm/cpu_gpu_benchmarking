@@ -79,6 +79,7 @@ acc_end = "  !$acc end data\n"
 
 loop_code = acc_start
 loop_code += "  call system_clock(clock_start, clock_rate)\n\n"
+loop_code += "  ret_code = GPTLstart('main_loop')\n\n"
 loop_code += "  do iter = 1, iterations\n"
 for i in range(1, args.loops + 1):
     var_a = random.randint(1, args.vars)
@@ -101,6 +102,9 @@ for i in range(1, args.loops + 1):
 
 # --- Compute and Print Average ---
 loop_code += "  end do\n"
+loop_code += "  ret_code = GPTLstop('main_loop')\n"
+loop_code += "  ret_code = GPTLpr_summary(MPI_COMM_WORLD)\n"
+loop_code += "  ret_code = GPTLfinalize()\n"
 loop_code += "\n  call system_clock(clock_end)\n"
 loop_code += "  elapsed_time = real(clock_end - clock_start, dp) / real(clock_rate, dp)\n"
 loop_code += "  print *, 'Loop execution time (s):', elapsed_time\n"
@@ -122,12 +126,24 @@ timer_vars = (
 # --- Final Fortran Code ---
 fortran_code = f"""
 program add_arrays
+  use gptl
+  use mpi
   implicit none
   integer, parameter :: dp = kind(1.0d0)
+  integer :: ret_code, ierr, mpi_rank, mpi_size
 {decls_loop_vars.strip()}
 {timer_vars.strip()}
 {decls.strip()}
 {namelist_block.strip()}
+
+  call MPI_Init(ierr)
+  call MPI_Comm_rank(MPI_COMM_WORLD, mpi_rank, ierr)
+  call MPI_Comm_size(MPI_COMM_WORLD, mpi_size, ierr)
+
+  ret_code = GPTLsetoption(GPTLprint_method, GPTLfull_tree)
+  ret_code = GPTLsetoption(GPTLabort_on_error, 1) ! Abort on GPTL error
+  ret_code = GPTLsetoption(GPTLoverhead, 0)       ! Turn off overhead estimate
+  ret_code = GPTLinitialize()                     ! Initialize GPTL
 
   ! Allocate and initialize variables
 {random_init.strip()}

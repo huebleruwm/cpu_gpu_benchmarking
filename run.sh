@@ -67,4 +67,5 @@ if [ ! -x "$BINARY" ]; then
 fi
 
 echo "Running $BINARY with ${NTASKS} MPI task(s), iterations=${ITERATIONS}, and dimensions: ${DIMS[*]}"
-mpirun -n "$NTASKS" "$BINARY"
+#mpirun -n "$NTASKS" "$BINARY"
+mpirun --cpu-bind core --mem-bind local -np "$NTASKS" bash -c "cd $(pwd); set_gpu_rank $BINARY"

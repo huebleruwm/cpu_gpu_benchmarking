@@ -19,7 +19,7 @@ dims = list(map(int, args.dims.split(",")))
 dim_string = ",".join(map(str, dims))
 fixed_dims = dims[1:] if len(dims) > 1 else []
 config = args.config
-csv_filename = f"{args.name}_{config}_D{len(dims)}_V{args.nvars}_L{args.nloops}_T{ntasks}.csv"
+csv_filename = f"{args.name}_{config}_Dxb{'b'.join(map(str, dims[1:]))}_V{args.nvars}_L{args.nloops}_T{ntasks}.csv"
 
 # --- Step 1: Generate Fortran Program ---
 print(f">>> Generating Fortran source with {args.nvars} vars, {args.nloops} loops, dims={dim_string}")
@@ -39,7 +39,6 @@ with open(csv_filename, mode="w", newline="") as f:
     )
 
 n1 = 1
-print(dims[0])
 max_n1 = dims[0]
 
 while n1 <= max_n1:
@@ -56,21 +55,21 @@ while n1 <= max_n1:
             text=True
         )
 
-        # Extract runtimes from all tasks
-        runtimes = []
-        for line in result.stdout.splitlines():
-            if "Loop execution time (s):" in line:
-                try:
-                    time_val = float(line.strip().split()[-1])
-                    runtimes.append(time_val)
-                except ValueError:
-                    pass
+        runtime = None
+        try:
+            with open("timing.summary", "r") as timing_file:
+                for line in timing_file:
+                    if line.strip().startswith("main_loop"):
+                        fields = line.split()
+                        runtime = float(fields[5])  # wallmax
+                        break
+        except Exception as e:
+            raise RuntimeError(f"Error reading timing.summary: {e}")
 
-        if not runtimes:
-            raise RuntimeError("No loop timing lines found in output.")
+        if runtime is None:
+            raise RuntimeError("Failed to extract 'main_loop' wallmax time from timing.summary")
 
-        runtime = max(runtimes)
-        print(f"  -> Max Time = {runtime:.6f} s")
+        print(f"  -- Batch Size = {n1*ntasks} --- Runtime = {runtime:.6f} s --- Throughput = {n1*ntasks/runtime:.3f}")
 
         # Save to CSV
         print(f"Saving to {csv_filename}")
@@ -87,14 +86,14 @@ while n1 <= max_n1:
     if n1 < 32:
         n1 += 1
     elif n1 < 64:
-        n1 += 2
-    elif n1 < 128:
         n1 += 4
-    elif n1 < 256:
+    elif n1 < 128:
         n1 += 8
-    elif n1 < 512:
+    elif n1 < 256:
         n1 += 16
-    elif n1 < 1024:
+    elif n1 < 512:
         n1 += 32
+    elif n1 < 1024:
+        n1 += 64
     else:
         n1 *= 2

@@ -4,6 +4,9 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+main.F90
+dims.nml
+timing.summary
 
 # Ignore compiled binaries and object files
 *.o
