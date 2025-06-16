@@ -18,6 +18,7 @@ def load_all_data():
             df = pd.read_csv(path)
             if "n1" in df.columns and "loop_runtime_seconds" in df.columns:
                 df["throughput"] = df["ntasks"] * df["n1"] / df["loop_runtime_seconds"]
+                df["batch size"] = df["ntasks"] * df["n1"]
                 df["__filename__"] = file
                 df["__label__"] = os.path.splitext(file)[0]  # Strip ".csv"
                 data_frames[file] = df
@@ -79,7 +80,7 @@ def update_plots(selected_files, scale_mode):
 
     runtime_fig = px.line(
         combined_df,
-        x="n1",
+        x="batch size",
         y="loop_runtime_seconds",
         color="__label__",
         markers=True,
@@ -89,7 +90,7 @@ def update_plots(selected_files, scale_mode):
 
     throughput_fig = px.line(
         combined_df,
-        x="n1",
+        x="batch size",
         y="throughput",
         color="__label__",
         markers=True,
